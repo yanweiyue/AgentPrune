@@ -19,7 +19,7 @@ async def evaluate(
         eval_batch_size: int = 4,
         ) -> float:
 
-    print(f"Evaluating swarm on {dataset.__class__.__name__} split {dataset.split}")
+    print(f"Evaluating AgentPrune on {dataset.__class__.__name__} split {dataset.split}")
     
     graph.spatial_logits.requires_grad_ = False
     graph.temporal_logits.requires_grad_ = False

@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 
-from swarm.utils.log import logger
-from swarm.environment.tools.coding.python_executor import PyExecutor
-from swarm.environment.tools.coding.executor_types import Executor
+from AgentPrune.utils.log import logger
+from AgentPrune.environment.tools.coding.python_executor import PyExecutor
+from AgentPrune.environment.tools.coding.executor_types import Executor
 
 EXECUTOR_MAPPING = {
     "py": PyExecutor,
