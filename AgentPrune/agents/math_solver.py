@@ -57,7 +57,4 @@ class MathSolver(Node):
         if self.role == "Programming Expert":
             answer = execute_code_get_return(response.lstrip("```python\n").rstrip("\n```"))
             response += f"\nthe answer is {answer}"
-        print(f"#################system_prompt:{system_prompt}")
-        print(f"#################user_prompt:{user_prompt}")
-        print(f"#################response:{response}")
         return response

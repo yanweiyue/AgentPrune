@@ -7,6 +7,7 @@ import time
 import asyncio
 from pathlib import Path
 import torch
+import torch.nn.functional as F
 import copy
 from typing import List,Union,Literal
 import random
@@ -19,6 +20,7 @@ from AgentPrune.tools.coding.python_executor import PyExecutor
 from AgentPrune.utils.globals import Time
 from AgentPrune.utils.const import AgentPrune_ROOT
 from AgentPrune.utils.globals import Cost, PromptTokens, CompletionTokens
+from AgentPrune.utils.utils import nuclear_norm,frobenius_norm
 
 def load_result(result_file):
     if not result_file.exists():
@@ -45,6 +47,7 @@ def parse_args():
                         choices=['DirectAnswer', 'FullConnected', 'Random', 'Chain','Debate','Layered','Star'],
                         help="Mode of operation. Default is 'FullConnected'.")
     parser.add_argument('--lr', type=float, default=0.1,help="learning rate")
+    parser.add_argument('--delta', type=float, default=0.1, help="noise level")
     parser.add_argument('--batch_size', type=int, default=4,help="batch size")
     parser.add_argument('--imp_per_iterations', type=int, default=5,help="Prune every few iterations. Default 5.")
     parser.add_argument('--num_rounds',type=int,default=2,help="Number of optimization/inference rounds for one query")
@@ -97,7 +100,7 @@ async def main():
         start_ts = time.time()
         answer_log_probs = []
         tests = []
-        
+        add_losses = []        
         current_batch = dataloader(dataset,args.batch_size,i_batch)
         if current_batch is None:
             print("No more data available.")
@@ -107,18 +110,31 @@ async def main():
             realized_graph = copy.deepcopy(graph)
             realized_graph.spatial_logits = graph.spatial_logits
             realized_graph.temporal_logits = graph.temporal_logits
+            
+            spatial_matrix_train = realized_graph.spatial_logits.reshape((len(agent_names),len(agent_names)))
+            temporal_matrix_train = realized_graph.temporal_logits.reshape((len(agent_names),len(agent_names)))
+            spatial_matrix_fixed = torch.tensor(kwargs["fixed_spatial_masks"],dtype=torch.float32).reshape((len(agent_names),len(agent_names)))
+            temporal_matrix_fixed = torch.tensor(kwargs["fixed_temporal_masks"],dtype=torch.float32).reshape((len(agent_names),len(agent_names)))
+            loss_s = nuclear_norm(spatial_matrix_train)
+            loss_t = nuclear_norm(temporal_matrix_train)
+            frob_loss_s = frobenius_norm(spatial_matrix_fixed, spatial_matrix_train)
+            frob_loss_t = frobenius_norm(temporal_matrix_fixed, temporal_matrix_train)
+            add_loss = loss_s + loss_t + F.relu(frob_loss_s - args.delta) + F.relu(frob_loss_t - args.delta)
+            
             task = record["prompt"]
             test = record["test"]
             tests.append(test)
             input_dict = {"task": task}
             answer_log_probs.append(asyncio.create_task(realized_graph.arun(input_dict,args.num_rounds)))
+            add_losses.append(add_loss)
+            
         raw_results = await asyncio.gather(*answer_log_probs)
         raw_answers, log_probs = zip(*raw_results)
         loss_list: List[torch.Tensor] = []
         utilities: List[float] = []
         data = load_result(result_file)
-        
-        for task, answer, log_prob, test in zip(current_batch, raw_answers, log_probs, tests):
+               
+        for task, answer, log_prob, add_loss, test in zip(current_batch, raw_answers, log_probs, add_losses, tests):
             if not isinstance(answer,list):
                 raise TypeError(f"Expected a list for the answer, but got {type(answer).__name__}")
             answer = answer[0].lstrip("```python\n").rstrip("\n```")
@@ -129,7 +145,7 @@ async def main():
             utility = is_solved
             utilities.append(utility)
             single_loss = -log_prob * utility
-            loss_list.append(single_loss)
+            loss_list.append(single_loss+add_loss)
             updated_item = {
                 "Question": task,
                 "Tests": test,

@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 from typing import Iterator
 import pandas as pd
 import numpy as np
@@ -10,6 +11,7 @@ import copy
 from AgentPrune.graph.graph import Graph
 from experiments.accuracy import Accuracy
 from AgentPrune.utils.globals import Cost, PromptTokens, CompletionTokens
+from AgentPrune.utils.utils import nuclear_norm,frobenius_norm
 
 async def train(graph:Graph,
             dataset,
@@ -19,6 +21,8 @@ async def train(graph:Graph,
             batch_size:int = 4,
             imp_per_iters: int = 1,
             pruning_rate: float = 0.05,
+            args=None,
+            kwargs=None,
           ) -> None:
     
     def infinite_data_loader() -> Iterator[pd.DataFrame]:
@@ -37,24 +41,35 @@ async def train(graph:Graph,
         start_ts = time.time()
         correct_answers = []
         answer_log_probs = []
-
+        add_losses = []
         for i_record, record in zip(range(batch_size), loader):
             realized_graph = copy.deepcopy(graph)
             realized_graph.spatial_logits = graph.spatial_logits
             realized_graph.temporal_logits = graph.temporal_logits
+            
+            spatial_matrix_train = realized_graph.spatial_logits.reshape((sum(args.agent_nums),sum(args.agent_nums)))
+            temporal_matrix_train = realized_graph.temporal_logits.reshape((sum(args.agent_nums),sum(args.agent_nums)))
+            spatial_matrix_fixed = torch.tensor(kwargs["fixed_spatial_masks"],dtype=torch.float32).reshape((sum(args.agent_nums),sum(args.agent_nums)))
+            temporal_matrix_fixed = torch.tensor(kwargs["fixed_temporal_masks"],dtype=torch.float32).reshape((sum(args.agent_nums),sum(args.agent_nums)))
+            loss_s = nuclear_norm(spatial_matrix_train)
+            loss_t = nuclear_norm(temporal_matrix_train)
+            frob_loss_s = frobenius_norm(spatial_matrix_fixed, spatial_matrix_train)
+            frob_loss_t = frobenius_norm(temporal_matrix_fixed, temporal_matrix_train)
+            add_loss = loss_s + loss_t + F.relu(frob_loss_s - args.delta) + F.relu(frob_loss_t - args.delta)
             input_dict = dataset.record_to_input(record)
             print(input_dict)
             answer_log_probs.append(asyncio.create_task(realized_graph.arun(input_dict,num_rounds)))
             correct_answer = dataset.record_to_target_answer(record)
             correct_answers.append(correct_answer)
-        
+            add_losses.append(add_loss)
+            
         raw_results = await asyncio.gather(*answer_log_probs)
         raw_answers, log_probs = zip(*raw_results)
         loss_list: List[torch.Tensor] = []
         utilities: List[float] = []
         answers: List[str] = []
         
-        for raw_answer, log_prob, correct_answer in zip(raw_answers, log_probs, correct_answers):
+        for raw_answer, log_prob, add_loss, correct_answer in zip(raw_answers, log_probs, add_losses, correct_answers):
             answer = dataset.postprocess_answer(raw_answer)
             answers.append(answer)
             assert isinstance(correct_answer, str), \
@@ -64,27 +79,27 @@ async def train(graph:Graph,
             utility = accuracy.get()
             utilities.append(utility)
             single_loss = - log_prob * utility
-            loss_list.append(single_loss)
+            loss_list.append(single_loss+add_loss)
             print(f"correct answer:{correct_answer}")
     
         total_loss = torch.mean(torch.stack(loss_list))
         optimizer.zero_grad() 
         total_loss.backward()
         optimizer.step()
-        spatial_probs = torch.sigmoid(graph.spatial_logits) # Parameter containing:tensor([-0.0501...,501,  0.0501], requires_grad=True)
-        temporal_probs = torch.sigmoid(graph.temporal_logits) # Parameter containing:tensor([-0.0501...,501,  0.0501], requires_grad=True)
+        spatial_probs = torch.sigmoid(graph.spatial_logits)
+        temporal_probs = torch.sigmoid(graph.temporal_logits)
         
         print("raw_answers:",raw_answers)
         print("answers:",answers)
         print(f"Batch time {time.time() - start_ts:.3f}")
-        print("utilities:", utilities) # [0.0, 0.0, 0.0, 1.0]
-        print("loss:", total_loss.item()) # 4.6237263679504395
-        print("Spatial logits Grad:", graph.spatial_logits.grad) # tensor([-0.1308, ...,  0.1308])
-        print("Temporal logits Grad:", graph.spatial_logits.grad) # tensor([-0.1308, ...,  0.1308])
+        print("utilities:", utilities)
+        print("loss:", total_loss.item()) 
+        print("Spatial logits Grad:", graph.spatial_logits.grad)
+        print("Temporal logits Grad:", graph.spatial_logits.grad)
         print("Spatial logits:", graph.spatial_logits)
         print("Temporal logits:", graph.temporal_logits)
-        print("Spatial probs:", spatial_probs) # edge_probs: tensor([0.4875,... , 0.512],  grad_fn=<SigmoidBackward0>)
-        print("Temporal probs:", temporal_probs) # edge_probs: tensor([0.4875,... , 0.512],  grad_fn=<SigmoidBackward0>)
+        print("Spatial probs:", spatial_probs)
+        print("Temporal probs:", temporal_probs)
         print(f"Cost {Cost.instance().value}")
         print(f"PromptTokens {PromptTokens.instance().value}")
         print(f"CompletionTokens {CompletionTokens.instance().value}")

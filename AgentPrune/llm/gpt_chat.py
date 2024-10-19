@@ -11,9 +11,6 @@ from AgentPrune.llm.llm import LLM
 from AgentPrune.llm.llm_registry import LLMRegistry
 
 
-OPENAI_API_KEYS = ['']
-BASE_URL = ''
-
 load_dotenv()
 MINE_BASE_URL = os.getenv('BASE_URL')
 MINE_API_KEYS = os.getenv('API_KEY')
@@ -70,11 +67,6 @@ class GPTChat(LLM):
         
         if isinstance(messages, str):
             messages = [Message(role="user", content=messages)]
-        # return await gpt_achat(self.model_name,
-        #                        messages,
-        #                        max_tokens,
-        #                        temperature,
-        #                        num_comps)
         return await achat(self.model_name,messages)
     
     def gen(
