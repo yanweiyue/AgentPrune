@@ -1,10 +1,12 @@
 # ✂️ AgentPrune
 
-## 📰 Paper
 
 ![1742733316798](image/README/1742733316798.png)
 
-🚩 Updates (2024-10-03) The paper is available at arXiv [PDF](https://arxiv.org/abs/2410.02506).
+## 📰 Paper
+
+- 🎉 Updates (2025-01) AgentPrune is accepted by [ICLR](https://openreview.net/forum?id=LkzuPorQ5L)
+- 🚩 Updates (2024-10) The paper is available at arXiv [PDF](https://arxiv.org/abs/2410.02506).
 
 ## 👋🏻 Method Overview
 
@@ -61,12 +63,25 @@ We also provide experimental code for other datasets and topologies.You can refe
 
 ### 🔗 Integrate into other multi-agent systems frameworks
 
-We provide examples of integrating AgentPrune with the currently popular `AutoGen` and `GPTSwarm` frameworks. Although we did not implement our approach based on their original codebases, we implemented equivalent algorithms within our own codebase. For example, the integration with `GPTSwarm` is equivalent to its edge-optimized mode, while the integration with `AutoGen` is equivalent to its RoundRobinGroupChat mode.
+We demonstrate the integration of AgentPrune with the widely-used `AutoGen` and `GPTSwarm` frameworks. Although the integration is not based on their original codebase, the underlying logic remains consistent with the frameworks' core principles. Specifically, the integration with `GPTSwarm` aligns with its edge-optimized mode, while the integration with `AutoGen` corresponds to its RoundRobinGroupChat mode.
 
 ```bash
 python experiments_autogen/run_humaneval.py --optimized_spatial --optimized_temporal
 python experiments_autogen/run_gsm8k.py --optimized_spatial --optimized_temporal --no_spatial
 python experiments/run_mmlu.py --mode FullConnected --batch_size 4 --agent_nums 5 --num_iterations 200 --imp_per_iterations 200 --pruning_rate 0.5 --num_rounds 1 --optimized_spatial
+```
+## 📚 Citation
+
+If you find this repo useful, please consider citing our paper as follows:
+```bibtex
+@inproceedings{
+    zhang2025cut,
+    title={Cut the Crap: An Economical Communication Pipeline for {LLM}-based Multi-Agent Systems},
+    author={Guibin Zhang and Yanwei Yue and Zhixun Li and Sukwon Yun and Guancheng Wan and Kun Wang and Dawei Cheng and Jeffrey Xu Yu and Tianlong Chen},
+    booktitle={The Thirteenth International Conference on Learning Representations},
+    year={2025},
+    url={https://openreview.net/forum?id=LkzuPorQ5L}
+}
 ```
 
 ## 🙏 Acknowledgement
