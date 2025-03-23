@@ -1,11 +1,11 @@
-# ✂️ AgentPrune
+# ✂️ [ICLR'25] AgentPrune
 
 
 ![1742733316798](image/README/1742733316798.png)
 
 ## 📰 Paper
 
-- 🎉 Updates (2025-01) AgentPrune is accepted by [ICLR](https://openreview.net/forum?id=LkzuPorQ5L)
+- 🎉 Updates (2025-01) AgentPrune is accepted by [ICLR](https://openreview.net/forum?id=LkzuPorQ5L)!
 - 🚩 Updates (2024-10) The paper is available at arXiv [PDF](https://arxiv.org/abs/2410.02506).
 
 ## 👋🏻 Method Overview
