@@ -1,5 +1,4 @@
 import re
-import torch
 
 ANS_RE = re.compile(r"#### (\-?[0-9\.\,]+)")
 INVALID_ANS = "[invalid]"
@@ -53,9 +52,3 @@ def clean_answer(model_pred):
 
     return pred
 
-def nuclear_norm(matrix):
-    _, S, _ = torch.svd(matrix)
-    return torch.sum(S)
-
-def frobenius_norm(A, S):
-    return torch.norm(A - S, p='fro')

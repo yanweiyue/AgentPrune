@@ -176,7 +176,6 @@ class FinalMajorVote(Node):
         max_output_num = 0
         for info in spatial_info.values():
             processed_output = self.prompt_set.postprocess_answer(info['output'])
-            print(processed_output)
             if processed_output in output_num:
                 output_num[processed_output] += 1
             else:

@@ -61,7 +61,8 @@ class Node(ABC):
         self.outputs: List[Any] = []
         self.raw_inputs: List[Any] = []
         self.role = ""
-        self.last_memory: Dict[str,List[Any]] = {'inputs':[],'outputs':[],'raw_inputs':[]}        
+        self.last_memory: Dict[str,List[Any]] = {'inputs':[],'outputs':[],'raw_inputs':[]}
+        self.conversation_history : List[Dict] = [] # chat history of the whole conversation        
 
     @property
     def node_name(self):
@@ -155,7 +156,6 @@ class Node(ABC):
 
 
     async def async_execute(self, input:Any, **kwargs):
-
         self.outputs = []
         spatial_info:Dict[str,Any] = self.get_spatial_info()
         temporal_info:Dict[str,Any] = self.get_temporal_info()

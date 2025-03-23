@@ -14,7 +14,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.stdout.reconfigure(encoding='utf-8')
 
 from AgentPrune.utils.const import AgentPrune_ROOT
-from AgentPrune.graph.graph import Graph
+from AgentPrune.graph.autogen_graph import GraphAutoGen
 from AgentPrune.tools.reader.readers import JSONLReader
 from AgentPrune.utils.globals import Time
 from AgentPrune.utils.globals import Cost, PromptTokens, CompletionTokens
@@ -40,22 +40,22 @@ def parse_args():
     parser = argparse.ArgumentParser(description="AgentPrune Experiments on gsm8k")
     parser.add_argument("--dataset_json", type=str, default="dataset/gsm8k/gsm8k.jsonl")
     parser.add_argument("--result_file", type=str, default=None)
-    parser.add_argument("--llm_name", type=str, default="gpt-4-1106-preview")
-    parser.add_argument('--mode', type=str, default='FullConnected',
+    parser.add_argument("--llm_name", type=str, default="gpt-4o-mini")
+    parser.add_argument('--mode', type=str, default='Chain',
                         choices=['DirectAnswer', 'FullConnected', 'Random', 'Chain','Debate','Layered','Star'],
                         help="Mode of operation. Default is 'FullConnected'.")
     parser.add_argument('--lr', type=float, default=0.1,help="learning rate")
     parser.add_argument('--batch_size', type=int, default=4,help="batch size")
     parser.add_argument('--imp_per_iterations', type=int, default=5, help="Prune every few iterations. Default 5.")
-    parser.add_argument('--num_rounds',type=int,default=1,help="Number of optimization/inference rounds for one query")
+    parser.add_argument('--num_rounds',type=int,default=2,help="Number of optimization/inference rounds for one query")
     parser.add_argument('--pruning_rate', type=float, default=0.25,help="The Rate of Pruning. Default 0.05.")
     parser.add_argument('--num_iterations', type=int, default=10,help="The num of training iterations.")
     parser.add_argument('--domain', type=str, default="gsm8k",help="Domain (the same as dataset name), default 'gsm8k'")
-    parser.add_argument('--agent_names', nargs='+', type=str, default=['MathSolver'],
+    parser.add_argument('--agent_names', nargs='+', type=str, default=['MathSolverAG'],
                         help='Specify agent names as a list of strings')
     parser.add_argument('--agent_nums', nargs='+', type=int, default=[4],
                         help='Specify the number of agents for each name in agent_names')
-    parser.add_argument('--decision_method', type=str, default='FinalRefer',
+    parser.add_argument('--decision_method', type=str, default='FinalReferAG',
                         help='The decison method of the agentprune')
     parser.add_argument('--optimized_spatial',action='store_true')
     parser.add_argument('--optimized_temporal',action='store_true')
@@ -80,7 +80,7 @@ async def main():
     agent_names = [name for name,num in zip(args.agent_names,args.agent_nums) for _ in range(num)]
     decision_method = args.decision_method
     kwargs = get_kwargs(args.mode,len(agent_names))
-    graph = Graph(domain="gsm8k",
+    graph = GraphAutoGen(domain="gsm8k",
                   llm_name=args.llm_name,
                   agent_names=agent_names,
                   decision_method=decision_method,
@@ -112,7 +112,7 @@ async def main():
             answer = record["answer"]
             answers.append(answer)
             input_dict = {"task": task}
-            answer_log_probs.append(asyncio.create_task(realized_graph.arun(input_dict,args.num_rounds)))
+            answer_log_probs.append(asyncio.create_task(realized_graph.arun(input_dict,args.num_rounds,aggregate_mode='last connected')))
         raw_results = await asyncio.gather(*answer_log_probs)
         raw_answers, log_probs = zip(*raw_results)
         loss_list: List[torch.Tensor] = []

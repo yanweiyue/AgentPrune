@@ -8,8 +8,8 @@ import argparse
 import random
 
 from AgentPrune.graph.graph import Graph
-from datasets.mmlu_dataset import MMLUDataset
-from datasets.MMLU.download import download
+from dataset.mmlu_dataset import MMLUDataset
+from dataset.MMLU.download import download
 from experiments.train_mmlu import train
 from experiments.evaluate_mmlu import evaluate
 from AgentPrune.utils.const import AgentPrune_ROOT
@@ -25,8 +25,6 @@ def parse_args():
                         help="Mode of operation. Default is 'FullConnected'.")
     parser.add_argument('--lr', type=float, default=0.1,
                         help="learning rate")
-    parser.add_argument('--delta', type=float, default=0.1,
-                        help="noise level")
     parser.add_argument('--batch_size', type=int, default=4,
                         help="batch size")
     parser.add_argument('--agent_names', nargs='+', type=str, default=['AnalyzeAgent'],
@@ -79,14 +77,7 @@ async def main():
     
     if args.optimized_spatial or args.optimized_temporal:
         await train(graph=graph,dataset=dataset_train,num_iters=args.num_iterations,num_rounds=args.num_rounds,
-                    lr=args.lr,batch_size=args.batch_size,imp_per_iters=args.imp_per_iterations,pruning_rate=args.pruning_rate,args=args,kwargs=kwargs)
-        
-    print("Final spatial logits: ",graph.spatial_logits)
-    print("Final temporal logits: ",graph.temporal_logits)
-    print("Final spatial masks: ",graph.spatial_masks)
-    print("Final temporal masks: ",graph.temporal_masks)
-    print("Final spatial sparsity:",graph.spatial_masks.sum()/graph.spatial_masks.numel())
-    print("Final temporal sparsity:",graph.temporal_masks.sum()/graph.temporal_masks.numel())
+                    lr=args.lr,batch_size=args.batch_size,imp_per_iters=args.imp_per_iterations,pruning_rate=args.pruning_rate)
     
     score = await evaluate(graph=graph,dataset=dataset_val,num_rounds=args.num_rounds,limit_questions=limit_questions,eval_batch_size=args.batch_size)
     print(f"Score: {score}")

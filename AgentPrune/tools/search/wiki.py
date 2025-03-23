@@ -11,7 +11,6 @@ class WikiSearch:
 
     def search(self, query):
         result = wikipedia.search(query[:300], results=1, suggestion=True)
-        print(result)
         if len(result[0]) != 0:
             return wikipedia.page(title=result[0]).content
         
@@ -34,7 +33,6 @@ async def get_wikipedia_summary(title):
 async def search_wiki(query):
     wikipedia.set_lang("en")
     result = wikipedia.search(query, results=2, suggestion=True)
-    print(result)
     ret = ""
     tasks = []
     

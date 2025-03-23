@@ -159,9 +159,12 @@ class Graph(ABC):
             self.nodes[node_id].temporal_predecessors = []
             self.nodes[node_id].temporal_successors = []
 
-    def connect_decision_node(self):
+    def connect_decision_node(self, last_node_id: str = None):
         for node_id in self.nodes.keys():
-            self.nodes[node_id].add_successor(self.decision_node)
+            if last_node_id is None:
+                self.nodes[node_id].add_successor(self.decision_node)
+            elif last_node_id == node_id:
+                self.nodes[node_id].add_successor(self.decision_node)
 
     def construct_spatial_connection(self, temperature: float = 1.0, threshold: float = None,): # temperature must >= 1.0
         self.clear_spatial_connection()
@@ -218,7 +221,8 @@ class Graph(ABC):
     def run(self, inputs: Any, 
                   num_rounds:int = 3, 
                   max_tries: int = 3, 
-                  max_time: int = 600,) -> List[Any]:
+                  max_time: int = 600,
+                  aggregate_mode: str = "all connected") -> List[Any]:
         # inputs:{'task':"xxx"}
         log_probs = 0
         for round in range(num_rounds):
@@ -246,8 +250,10 @@ class Graph(ABC):
                         zero_in_degree_queue.append(successor.id)
             
             self.update_memory()
-            
-        self.connect_decision_node()
+        if aggregate_mode == "all connected":
+            self.connect_decision_node()
+        elif aggregate_mode == "last connected":
+            self.connect_decision_node(last_node_id=current_node_id)
         self.decision_node.execute(inputs)
         final_answers = self.decision_node.outputs
         if len(final_answers) == 0:
@@ -258,13 +264,12 @@ class Graph(ABC):
     async def arun(self, input: Dict[str,str], 
                   num_rounds:int = 3, 
                   max_tries: int = 3, 
-                  max_time: int = 600,) -> List[Any]:
-        # inputs:{'task':"xxx"}
+                  max_time: int = 600,
+                  aggregate_mode: str = "all connected",) -> List[Any]:
         log_probs = 0
         for round in range(num_rounds):
             log_probs += self.construct_spatial_connection()
             log_probs += self.construct_temporal_connection(round)
-            
             in_degree = {node_id: len(node.spatial_predecessors) for node_id, node in self.nodes.items()}
             zero_in_degree_queue = [node_id for node_id, deg in in_degree.items() if deg == 0]
 
@@ -287,7 +292,10 @@ class Graph(ABC):
             
             self.update_memory()
             
-        self.connect_decision_node()
+        if aggregate_mode == "all connected":
+            self.connect_decision_node()
+        elif aggregate_mode == "last connected":
+            self.connect_decision_node(last_node_id=current_node_id)
         await self.decision_node.async_execute(input)
         final_answers = self.decision_node.outputs
         if len(final_answers) == 0:

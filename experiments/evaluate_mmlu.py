@@ -65,9 +65,6 @@ async def evaluate(
             print("Correct answer:", correct_answer)
             accuracy.update(answer, correct_answer)
             accuracy.print()
-        print(f"Cost {Cost.instance().value}")
-        print(f"PromptTokens {PromptTokens.instance().value}")
-        print(f"CompletionTokens {CompletionTokens.instance().value}")
     accuracy.print()
     print("Done!")
 

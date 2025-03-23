@@ -26,6 +26,7 @@ API_KEY = "" # for OpenAI LLM backend
 ```
 
 ### Download Datasets
+
 Download MMLU, HumanEval and GSM8K datasets from MMLU, HumanEval and GSM8K. And put them in different folders.
 
 ### Run AgentPrune on MMLU by running the following scripts
@@ -40,6 +41,12 @@ python experiments/run_mmlu.py --agent_nums 6 --mode FakeAGFull --batch_size 4 -
 The above code verifies the experimental results of the `mmlu` dataset under different topologies.
 
 We also provide experimental code for other datasets and topologies.You can refer to `experiments/run_humaneval.py` and `experiments/run_gsm8k.py`.
+
+```
+python experiments_autogen/run_humaneval.py --optimized_spatial --optimized_temporal
+python experiments_autogen/run_gsm8k.py --optimized_spatial --optimized_temporal --no_spatial
+python experiments/run_mmlu.py --mode FullConnected --batch_size 4 --agent_nums 5 --num_iterations 200 --imp_per_iterations 200 --pruning_rate 0.5 --num_rounds 1 --optimized_spatial
+```
 
 ## Acknowledgement
 

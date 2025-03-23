@@ -4,6 +4,7 @@ from tenacity import retry, wait_random_exponential, stop_after_attempt
 from typing import Dict, Any
 from dotenv import load_dotenv
 import os
+from openai import OpenAI, AsyncOpenAI
 
 from AgentPrune.llm.format import Message
 from AgentPrune.llm.price import cost_count
@@ -11,37 +12,22 @@ from AgentPrune.llm.llm import LLM
 from AgentPrune.llm.llm_registry import LLMRegistry
 
 
+OPENAI_API_KEYS = ['']
+BASE_URL = ''
+
 load_dotenv()
 MINE_BASE_URL = os.getenv('BASE_URL')
-MINE_API_KEYS = os.getenv('API_KEY')
+MINE_API_KEY = os.getenv('API_KEY')
 
 
-@retry(wait=wait_random_exponential(max=100), stop=stop_after_attempt(3))
+@retry(wait=wait_random_exponential(max=300), stop=stop_after_attempt(3))
 async def achat(
     model: str,
     msg: List[Dict],):
-    request_url = MINE_BASE_URL
-    authorization_key = MINE_API_KEYS
-    headers = {
-        'Content-Type': 'application/json',
-        'authorization': authorization_key
-    }
-    data = {
-        "name": model,
-        "inputs": {
-            "stream": False,
-            "msg": repr(msg),
-        }
-    }
-    async with aiohttp.ClientSession() as session:
-        async with session.post(request_url, headers=headers ,json=data) as response:
-            response_data = await response.json()
-            if isinstance(response_data['data'],str):
-                prompt = "".join([item['content'] for item in msg])
-                cost_count(prompt,response_data['data'],model)
-                return response_data['data']
-            else:
-                raise Exception("api error")
+    client = AsyncOpenAI(base_url = MINE_BASE_URL, api_key = MINE_API_KEY,)
+    chat_completion = await client.chat.completions.create(messages = msg,model = model,)
+    response = chat_completion.choices[0].message.content
+    return response
     
 
 @LLMRegistry.register('GPTChat')
@@ -66,7 +52,7 @@ class GPTChat(LLM):
             num_comps = self.DEFUALT_NUM_COMPLETIONS
         
         if isinstance(messages, str):
-            messages = [Message(role="user", content=messages)]
+            messages = [{'role':'user', 'content':'messages'}]
         return await achat(self.model_name,messages)
     
     def gen(
