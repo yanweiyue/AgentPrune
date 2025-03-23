@@ -59,12 +59,6 @@ The above code verifies the experimental results of the `mmlu` dataset under dif
 
 We also provide experimental code for other datasets and topologies.You can refer to `experiments/run_humaneval.py` and `experiments/run_gsm8k.py`.
 
-```
-python experiments_autogen/run_humaneval.py --optimized_spatial --optimized_temporal
-python experiments_autogen/run_gsm8k.py --optimized_spatial --optimized_temporal --no_spatial
-python experiments/run_mmlu.py --mode FullConnected --batch_size 4 --agent_nums 5 --num_iterations 200 --imp_per_iterations 200 --pruning_rate 0.5 --num_rounds 1 --optimized_spatial
-```
-
 ### 🔗 Integrate into other multi-agent systems frameworks
 
 We provide examples of integrating AgentPrune with the currently popular `AutoGen` and `GPTSwarm` frameworks. Although we did not implement our approach based on their original codebases, we implemented equivalent algorithms within our own codebase. For example, the integration with `GPTSwarm` is equivalent to its edge-optimized mode, while the integration with `AutoGen` is equivalent to its RoundRobinGroupChat mode.
